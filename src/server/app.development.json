@@ -1,6 +1,6 @@
 {
     "data": {
-        "connectionString": "",
+        "connectionString": "Server=.;Database=Toucan;Trusted_Connection=True",
         "schemaName": ""
     },
     "kestrel": {
@@ -40,6 +40,7 @@
                 "revokeUri": ""
             }
         ],
+        "claimsNamespace": "//toucan/claims/",
         "tokenProvider": {
             "tokenExpiration": "10",
             "tokenSecurityKey": "startrekkingacrosstheuniverseonthestarshipenterpriseundercaptainkirk",

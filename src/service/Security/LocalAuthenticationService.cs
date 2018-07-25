@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Toucan.Contract;
 using Toucan.Data;
 using Toucan.Data.Model;
@@ -12,12 +13,14 @@ namespace Toucan.Service
 {
     public class LocalAuthenticationService : ILocalAuthenticationService
     {
+        private readonly Config config;
         private ICryptoService crypto;
         private DbContextBase db;
         private readonly IDeviceProfiler deviceProfiler;
 
-        public LocalAuthenticationService(DbContextBase db, ICryptoService crypto, IDeviceProfiler deviceProfiler)
+        public LocalAuthenticationService(DbContextBase db, IOptions<Config> config, ICryptoService crypto, IDeviceProfiler deviceProfiler)
         {
+            this.config = config.Value;
             this.crypto = crypto;
             this.db = db;
             this.deviceProfiler = deviceProfiler;
@@ -32,7 +35,7 @@ namespace Toucan.Service
                 if (this.crypto.CheckKey(login.PasswordHash, login.PasswordSalt, password))
                 {
                     string fingerprint = this.deviceProfiler.DeriveFingerprint(login.User);
-                    ClaimsIdentity identity = login.User.ToClaimsIdentity(fingerprint);
+                    ClaimsIdentity identity = login.User.ToClaimsIdentity(this.config.ClaimsNamespace, fingerprint);
 
                     return identity;
                 }

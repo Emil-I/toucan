@@ -59,7 +59,7 @@ namespace Toucan.Data
             modelBuilder.Entity<Role>(entity =>
             {
                 entity.Property(e => e.RoleId)
-                    .HasMaxLength(16);
+                    .HasMaxLength(32);
 
                 entity.Property(e => e.CreatedOn)
                     .IsRequired()
@@ -81,6 +81,41 @@ namespace Toucan.Data
                     .WithMany()
                     .HasForeignKey(o => o.LastUpdatedBy)
                     .IsRequired(false);
+            });
+
+            modelBuilder.Entity<SecurityClaim>(entity =>
+            {
+                entity.Property(e => e.SecurityClaimId)
+                    .IsRequired()
+                    .HasMaxLength(32);
+
+                entity.Property(e => e.Description)
+                    .IsRequired()
+                    .HasMaxLength(512);
+
+                entity.AddAuditColumns();
+            });
+
+            modelBuilder.Entity<RoleSecurityClaim>(entity =>
+            {
+                entity.HasKey(e => new { e.RoleId, e.SecurityClaimId})
+                    .HasName("PK_RoleSecurityClaim");
+
+                entity.Property(e => e.RoleId)
+                    .IsRequired()
+                    .HasMaxLength(32);
+
+                entity.HasOne(e => e.Role)
+                    .WithMany(p => p.SecurityClaims)
+                    .HasForeignKey(o => o.RoleId);
+
+                entity.Property(e => e.SecurityClaimId)
+                    .IsRequired()
+                    .HasMaxLength(32);
+
+                entity.HasOne(e => e.SecurityClaim)
+                    .WithMany(p => p.Roles)
+                    .HasForeignKey(o => o.SecurityClaimId);
             });
 
             modelBuilder.Entity<User>(entity =>
@@ -211,7 +246,7 @@ namespace Toucan.Data
                 entity.HasIndex(e => e.UserId)
                     .HasName("IX_UserRole_UserId");
 
-                entity.Property(e => e.RoleId).HasMaxLength(16);
+                entity.Property(e => e.RoleId).HasMaxLength(32);
 
                 entity.HasOne(d => d.Role)
                     .WithMany(p => p.Users)

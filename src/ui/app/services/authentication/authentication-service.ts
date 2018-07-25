@@ -1,10 +1,9 @@
-import { default as Axios, AxiosRequestConfig, AxiosResponse } from 'axios';
-import { default as jwtDecode } from 'jwt-decode';
-import { default as base64 } from 'base-64';
+import { default as Axios, AxiosResponse } from 'axios';
+import { every, includes, keys } from 'lodash/fp';
 import { IClaimsHelper } from './claims-helper';
 import { GlobalConfig, PayloadMessageTypes, TokenHelper } from '../../common';
-import { IAccessToken, ICredential, IJwtToken, ILoginProvider, IPayload, ISignupOptions, IUser } from '../../model';
-import { ICommonState, Store, StoreService, StoreTypes } from '../../store';
+import { IAccessToken, ICredential, ILoginProvider, IPayload, ISignupOptions, IUser, DefaultUser } from '../../model';
+import { Store, StoreService } from '../../store';
 
 // URL and endpoint constants
 const AUTH_URL = GlobalConfig.uri.auth;
@@ -42,13 +41,25 @@ export class AuthenticationService extends StoreService implements IClaimsHelper
             .then(onSuccess);
     }
 
-    isInRole(user: IUser, role: string): boolean {
+    satisfies(user: IUser, claims: string[]): boolean {
 
-        if (!user.roles)
+        if (!user.claims)
             return false;
-        else
-            return user.roles.find(o => o.toLowerCase() === role.toLowerCase()) !== undefined;
 
+        let items = keys(user.claims);
+
+        if (claims.length === 1)
+            return includes(claims[0], items);
+        else
+            return every(o => includes(o, items), claims);
+    }
+
+    satisfiesAny(user: IUser, claims: string[]): boolean {
+
+        if (!user.claims)
+            return false;
+
+        return claims.find(o => includes(o.split('/')[0], user.claims)) !== undefined;
     }
 
     login(credentials: ICredential) {
@@ -75,7 +86,7 @@ export class AuthenticationService extends StoreService implements IClaimsHelper
             let payload: IPayload<IAccessToken> = res.data;
 
             if (payload.message.messageTypeId === PayloadMessageTypes.success) {
-                let user: IUser = { authenticated: false, displayName: null, email: null, name: null, username: null, roles: [], verified: false };
+                let user: IUser = Object.assign({}, DefaultUser);
 
                 TokenHelper.removeAccessToken();
 

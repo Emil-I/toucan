@@ -7,17 +7,19 @@ using Toucan.Contract;
 using Toucan.Service;
 using Toucan.Server.Model;
 using Toucan.Service.Model;
+using Toucan.Contract.Security;
+using Toucan.Server.Security;
+using Toucan.Service.Security;
 
 namespace Toucan.Server.Controllers.Admin
 {
-    [Authorize(Policy = Policies.ManagerUserAccounts)]
+    [AuthorizationClaim(ClaimRequirementType.Exists, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")]
     [Route("api/manage/user/[action]")]
     [ServiceFilter(typeof(Filters.ApiResultFilter))]
     [ServiceFilter(typeof(Filters.ApiExceptionFilter))]
     public class ManageUserController : ControllerBase
     {
         private readonly IManageUserService manageUserService;
-
 
         public ManageUserController(IManageUserService manageUserService,IDomainContextResolver resolver, ILocalizationService localization) : base(resolver, localization)
         {

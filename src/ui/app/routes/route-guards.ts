@@ -1,6 +1,7 @@
 import Vue from 'vue';
-import { NavigationGuard, RawLocation, Route, RouteRecord } from 'vue-router';
+import { NavigationGuard, RawLocation, Route } from 'vue-router';
 import { AuthenticationService, IClaimsHelper } from '../services';
+import { isNil } from 'lodash/fp';
 import { TokenHelper } from '../common';
 import { IUser } from '../model';
 import { IRouteMeta } from './route-meta';
@@ -15,14 +16,19 @@ interface IRouteGuardOptions {
 
 function routeCheck(user: IUser, helper: IClaimsHelper, meta: IRouteMeta): boolean {
 
-    if (!meta.private && !meta.roles)
+    if (!meta.private && !meta.claims)
         return false;
 
-    if (user.authenticated && !meta.roles)
+    if (user.authenticated && !meta.claims)
         return false;
 
-    if (meta.roles && meta.roles.length > 0) {
-        return meta.roles.find(o => helper.isInRole(user, o)) === undefined;
+    let matchAny = isNil(meta.any) ? true : meta.any;
+
+    if (Array.isArray(meta.claims)) {
+        if (matchAny)
+            return !helper.satisfiesAny(user, meta.claims);
+        else
+            return !helper.satisfies(user, meta.claims);
     }
 
     return true;
@@ -30,7 +36,7 @@ function routeCheck(user: IUser, helper: IClaimsHelper, meta: IRouteMeta): boole
 
 function verifyCheck(user: IUser, meta: IRouteMeta): boolean {
 
-    if (user.authenticated && (meta.private || meta.roles))
+    if (user.authenticated && (meta.private || meta.claims))
         return !user.verified;
     else
         return false;
@@ -48,7 +54,7 @@ export function RouteGuards(options: IRouteGuardOptions): NavigationGuard {
 
             let sendTo: RawLocation = null;
 
-            if (user.authenticated && to.meta.roles) {
+            if (user.authenticated && to.meta.claims) {
                 sendTo = {
                     name: options.forbiddenRouteName
                 }

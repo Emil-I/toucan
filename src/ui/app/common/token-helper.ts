@@ -1,7 +1,8 @@
 import { default as jwtDecode } from 'jwt-decode';
 import { default as base64 } from 'base-64';
-import { IJwtToken, ILoginProvider, IUser } from '../model';
+import { IJwtToken, ILoginProvider, IUser, DefaultUser } from '../model';
 import { default as GlobalConfig } from '../config';
+import _, { PartialDeep } from 'lodash';
 
 export class TokenHelper {
 
@@ -38,29 +39,33 @@ export class TokenHelper {
 
     public static parseUserToken(token: string): IUser {
 
-        let user: IUser = { authenticated: false, cultureName: null, displayName: null, email: null, name: null, username: null, roles: [], verified: false };
+        let user: IUser = Object.assign({}, DefaultUser);
 
         if (token) {
 
             let decodedToken: IJwtToken = jwtDecode(token);
+            const ns = GlobalConfig.claimsNamespace;
 
             if (!user.authenticated)
                 user.authenticated = true;
 
             let name = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
-            let roles = decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+            let email = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || null;
             let sid = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid'];
-            let timeZoneId = decodedToken['TimeZoneId'];
+            let roles = decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
 
-            user.cultureName = decodedToken['CultureName'];
+            let claimNames = _.filter<string>(_.keys(decodedToken), o => o.startsWith(ns));
+            let claims = <any>_.mapKeys(_.pick(decodedToken, claimNames), (value,key) => key.replace(ns, '').substring(1));
+            
+            user.claims = claims;
+            user.cultureName = claims.culturename;
             user.displayName = name ? name[1] : null;
-            user.email = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || null;
-            user.name = user.email;
+            user.name = user.email = email;
             user.roles = Array.isArray(roles) ? roles : [roles];
-            user.verified = decodedToken['Verified'] === 'true' ? true : false;
+            user.verified = claims.verified === 'true' ? true : false;
             user.exp = new Date(decodedToken.exp * 1000);
             user.userId = sid;
-            user.timeZoneId = timeZoneId;
+            user.timeZoneId = claims.timezoneid;
         }
 
         return user;

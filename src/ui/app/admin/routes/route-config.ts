@@ -6,7 +6,7 @@ import { ManageUser } from '../users/user';
 import { ManageUserList } from '../users/user-list';
 import { SiteSettings } from '../settings/settings';
 import { SiteReports } from '../reports/reports';
-import { UserRoles } from '../../model';
+import { SecurityRoleClaims } from '../../model';
 import { RouteNames } from './route-names';
 
 export const RouteConfig: VueRouteConfig[] = [
@@ -19,7 +19,7 @@ export const RouteConfig: VueRouteConfig[] = [
         component: AreaLayout,
         path: '/',
         meta: {
-            roles: [UserRoles.Admin]
+            roles: [SecurityRoleClaims.Admin]
         },
         children: [
             {

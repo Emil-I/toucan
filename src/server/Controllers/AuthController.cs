@@ -23,15 +23,17 @@ namespace Toucan.Server.Controllers
         private readonly ILocalAuthenticationService authService;
         private readonly CultureService cultureService;
         private readonly Toucan.Server.Config serverConfig;
+        private readonly Service.Config serviceConfig;
         private readonly ISignupService signupService;
         private readonly ITokenProviderService<Token> tokenService;
 
-        public AuthController(IAntiforgery antiForgeryService, ILocalAuthenticationService authService, CultureService cultureService, IOptions<Toucan.Server.Config> serverConfig, ISignupService signupService, ITokenProviderService<Token> tokenService, IDomainContextResolver resolver, ILocalizationService localization) : base(resolver, localization)
+        public AuthController(IAntiforgery antiForgeryService, ILocalAuthenticationService authService, CultureService cultureService, IOptions<Toucan.Server.Config> serverConfig, IOptions<Toucan.Service.Config> serviceConfig, ISignupService signupService, ITokenProviderService<Token> tokenService, IDomainContextResolver resolver, ILocalizationService localization) : base(resolver, localization)
         {
             this.antiForgeryService = antiForgeryService;
             this.authService = authService;
             this.cultureService = cultureService;
             this.serverConfig = serverConfig.Value;
+            this.serviceConfig = serviceConfig.Value;
             this.signupService = signupService;
             this.tokenService = tokenService;
         }
@@ -101,8 +103,11 @@ namespace Toucan.Server.Controllers
 
             this.SetAntiforgeryCookies();
 
-            string cultureName = identity.Claims.FirstOrDefault(o => o.Type == CustomClaimTypes.CultureName).Value;
-            string timeZoneId = identity.Claims.FirstOrDefault(o => o.Type == CustomClaimTypes.TimeZoneId).Value;
+            string cultureClaimKey = this.serviceConfig.ClaimsNamespace + CustomClaimTypes.CultureName;
+            string timeZoneIdKey = this.serviceConfig.ClaimsNamespace +CustomClaimTypes.TimeZoneId;
+
+            string cultureName = identity.Claims.FirstOrDefault(o => o.Type == cultureClaimKey).Value;
+            string timeZoneId = identity.Claims.FirstOrDefault(o => o.Type == timeZoneIdKey).Value;
 
             this.cultureService.RefreshCookie(this.HttpContext, cultureName, timeZoneId);
 

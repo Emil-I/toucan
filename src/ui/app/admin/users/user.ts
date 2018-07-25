@@ -6,7 +6,7 @@ import { required, minLength } from 'vuelidate/lib/validators';
 import { ManageUserService } from './user-service';
 import { IRouteMixinData } from '../../mixins/mixin-router';
 import { PayloadMessageTypes } from '../../common';
-import { IKeyValueList, IStatusBarData, IUser, KeyValue } from '../../model';
+import { IKeyValueList, IStatusBarData, IUser, DefaultUser, KeyValue } from '../../model';
 import { StoreTypes } from '../../store';
 import { SupportedLocales, SupportedTimeZones } from '../../locales';
 import { DropDownSelect, Toggle } from '../../components';
@@ -125,6 +125,6 @@ export class ManageUser extends Vue {
   $route: IRouteMixinData;
   $store: Store<{}>;
   init: boolean = false;
-  user: IUser = { authenticated: false, cultureName: null, timeZoneId: null, displayName: null, email: null, name: null, username: null, roles: [], verified: false };
+  user: IUser = DefaultUser;
   $v: Vuelidate<any>
 };

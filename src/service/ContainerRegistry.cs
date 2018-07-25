@@ -1,6 +1,7 @@
 using StructureMap;
 using Toucan.Contract;
 using Toucan.Common;
+using Toucan.Service.Security;
 
 namespace Toucan.Service
 {
@@ -18,6 +19,7 @@ namespace Toucan.Service
             For<IAuditService>().Use<AuditService>();
             For<IManageUserService>().Use<ManageUserService>();
             For<IManageProfileService>().Use<ManageUserService>();
+            For<ISecurityClaimsInspector>().Use<SecurityClaimsInspector>().Singleton();
             For<ISignupService>().Use<SignupService>();
             For<ITokenProviderService<Token>>().Use<TokenProviderService>();
         }

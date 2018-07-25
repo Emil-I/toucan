@@ -5,6 +5,7 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Toucan.Contract;
+using Toucan.Contract.Security;
 using Toucan.Data;
 using Toucan.Data.Model;
 using Toucan.Service.Helpers;
@@ -47,9 +48,14 @@ namespace Toucan.Service
 
         public Task<ISearchResult<IUserExtended>> Search(int page, int pageSize)
         {
-            var q = this.db.User.Include(o => o.Roles).Include(o => o.Providers);
+            var q = from u in this.db.User
+                .Include(o => o.Roles)
+                .Include(o => o.Providers)
+                    select u;
 
-            var result = (ISearchResult<IUserExtended>)new SearchResult<IUserExtended>(q.AsNoTracking(), o => MapUser(o as Data.Model.User), page, pageSize);
+            Func<object, Model.User> map = o => MapUser(o as Data.Model.User, false);
+
+            var result = (ISearchResult<IUserExtended>)new SearchResult<IUserExtended>(q.AsNoTracking(), map, page, pageSize);
 
             return Task.FromResult(result);
         }
@@ -98,21 +104,30 @@ namespace Toucan.Service
             return this.MapUser(dbUser);
         }
 
-        private Model.User MapUser(Data.Model.User user)
+        private Model.User MapUser(Data.Model.User user, bool mapClaims = true)
         {
             if (user == null)
+            {
                 return new Model.User();
-            else
-                return new Model.User()
-                {
-                    CultureName = user.CultureName,
-                    DisplayName = user.DisplayName,
-                    Enabled = user.Enabled,
-                    Roles = user.Roles.Select(o => o.RoleId),
-                    TimeZoneId = user.TimeZoneId,
-                    UserId = user.UserId,
-                    Username = user.Username
-                };
+            }
+
+            string[] roles = user.Roles.Select(o => o.RoleId).Distinct().ToArray();
+            string[] claims = null;
+
+            if (mapClaims)
+                claims = user.Roles.Select(o => o.Role).SelectMany(o => o.SecurityClaims).Select(o => o.SecurityClaimId).Distinct().ToArray();
+
+            return new Model.User()
+            {
+                CultureName = user.CultureName,
+                DisplayName = user.DisplayName,
+                Enabled = user.Enabled,
+                Claims = claims ?? new string[] { },
+                Roles = roles,
+                TimeZoneId = user.TimeZoneId,
+                UserId = user.UserId,
+                Username = user.Username
+            };
         }
     }
 }

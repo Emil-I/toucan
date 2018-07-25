@@ -6,7 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Toucan.Contract;
+using Toucan.Contract.Security;
 using Toucan.Server.Model;
+using Toucan.Server.Security;
+using Toucan.Service.Security;
 
 namespace Toucan.Server.Controllers
 {
@@ -38,6 +41,22 @@ namespace Toucan.Server.Controllers
                 System.Threading.Thread.Sleep(1 * 1000);
                 return payload;
             });
+        }
+
+        [HttpGet]
+        [AuthorizationClaim(ClaimRequirementType.Strict, AuthorizationClaimTypes.CustomClaim, AuthorizationClaimValueTypes.Read)]
+        public async Task<object> SecureUserContent()
+        {
+            var payload = new Model.Payload<string>()
+            {
+                Data = "=] a secret smile for you!",
+                Message = new PayloadMessage()
+                {
+                    MessageType = PayloadMessageType.Success
+                }
+            };
+
+            return await Task.FromResult(payload);
         }
     }
 }
