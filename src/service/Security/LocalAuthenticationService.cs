@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Toucan.Contract;
+using Toucan.Contract.Security;
 using Toucan.Data;
 using Toucan.Data.Model;
 

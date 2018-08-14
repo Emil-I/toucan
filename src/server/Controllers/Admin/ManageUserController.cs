@@ -13,7 +13,7 @@ using Toucan.Service.Security;
 
 namespace Toucan.Server.Controllers.Admin
 {
-    [AuthorizationClaim(ClaimRequirementType.Exists, "http://schemas.microsoft.com/ws/2008/06/identity/claims/role")]
+    [Authorize(Roles = RoleTypes.Admin + "," + RoleTypes.SiteAdmin)]
     [Route("api/manage/user/[action]")]
     [ServiceFilter(typeof(Filters.ApiResultFilter))]
     [ServiceFilter(typeof(Filters.ApiExceptionFilter))]
@@ -21,7 +21,7 @@ namespace Toucan.Server.Controllers.Admin
     {
         private readonly IManageUserService manageUserService;
 
-        public ManageUserController(IManageUserService manageUserService,IDomainContextResolver resolver, ILocalizationService localization) : base(resolver, localization)
+        public ManageUserController(IManageUserService manageUserService, IDomainContextResolver resolver, ILocalizationService localization) : base(resolver, localization)
         {
             this.manageUserService = manageUserService;
         }

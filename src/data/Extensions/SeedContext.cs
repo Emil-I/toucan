@@ -23,7 +23,7 @@ namespace Toucan.Data
         {
             string[] claims = new string[]
             {
-                AuthorizationClaimTypes.CustomClaim
+                SecurityClaimTypes.Example
             };
 
             foreach (string claim in claims)
@@ -39,7 +39,7 @@ namespace Toucan.Data
                         Description = claim,
                         Enabled = true,
                         Origin = "System",
-                        ValidationPattern = AuthorizationClaimTypes.AllowedValuesPattern,
+                        ValidationPattern = SecurityClaimTypes.AllowedValuesPattern,
                         SecurityClaimId = claim
                     };
 
@@ -124,14 +124,14 @@ namespace Toucan.Data
 
                     if (systemRole.Key == RoleTypes.User)
                     {
-                        var claim = db.SecurityClaim.SingleOrDefault(o => o.SecurityClaimId == AuthorizationClaimTypes.CustomClaim);
+                        var claim = db.SecurityClaim.SingleOrDefault(o => o.SecurityClaimId == SecurityClaimTypes.Example);
                         
                         if (claim != null)
                             role.SecurityClaims.Add(new RoleSecurityClaim()
                             {
                                 Role = role,
-                                SecurityClaimId = AuthorizationClaimTypes.CustomClaim,
-                                Value = AuthorizationClaimValueTypes.Read
+                                SecurityClaimId = SecurityClaimTypes.Example,
+                                Value = SecurityClaimValueTypes.Read.ToString()
                             });
                     }
 

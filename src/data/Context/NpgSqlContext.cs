@@ -58,19 +58,31 @@ namespace Toucan.Data
 
             modelBuilder.Entity<Role>(entity =>
             {
+                entity.HasKey(e => e.RoleId)
+                    .HasName("PK_RoleId");
+
                 entity.Property(e => e.RoleId)
+                    .IsRequired()
                     .HasMaxLength(32);
 
-                entity.Property(e => e.CreatedOn)
-                    .IsRequired()
-                    .HasColumnType("timestamp WITH TIME ZONE")
-                    .HasDefaultValueSql("current_timestamp AT TIME ZONE 'UTC'");
+                entity.Property(e => e.ParentRoleId)
+                    .HasMaxLength(32);
+
+                entity.HasOne(e => e.Parent)
+                    .WithMany()
+                    .HasForeignKey(o => o.Children)
+                    .IsRequired(false);
 
                 entity.Property(e => e.Enabled);
 
                 entity.Property(e => e.Name)
                     .IsRequired()
                     .HasMaxLength(64);
+
+                entity.Property(e => e.CreatedOn)
+                    .IsRequired()
+                    .HasColumnType("timestamp WITH TIME ZONE")
+                    .HasDefaultValueSql("current_timestamp AT TIME ZONE 'UTC'");
 
                 entity.HasOne(e => e.CreatedByUser)
                     .WithMany()
@@ -98,7 +110,7 @@ namespace Toucan.Data
 
             modelBuilder.Entity<RoleSecurityClaim>(entity =>
             {
-                entity.HasKey(e => new { e.RoleId, e.SecurityClaimId})
+                entity.HasKey(e => new { e.RoleId, e.SecurityClaimId })
                     .HasName("PK_RoleSecurityClaim");
 
                 entity.Property(e => e.RoleId)

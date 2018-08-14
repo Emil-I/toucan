@@ -44,9 +44,9 @@ namespace Toucan.Server.Controllers
         }
 
         [HttpGet]
-        [AuthorizationClaim(ClaimRequirementType.Strict, AuthorizationClaimTypes.CustomClaim, AuthorizationClaimValueTypes.Read)]
+        [AuthorizeClaim(SecurityClaimTypes.Example, SecurityClaimValueTypes.Read)]
         public async Task<object> SecureUserContent()
-        {
+        {   
             var payload = new Model.Payload<string>()
             {
                 Data = "=] a secret smile for you!",

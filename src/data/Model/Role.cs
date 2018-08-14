@@ -7,11 +7,13 @@ namespace Toucan.Data.Model
     {
         public Role()
         {
+            this.Children = new HashSet<Role>();
+            this.SecurityClaims = new HashSet<RoleSecurityClaim>();
             this.Users = new HashSet<UserRole>();
-            this.SecurityClaims= new HashSet<RoleSecurityClaim>();
         }
 
         public string RoleId { get; set; }
+        public string ParentRoleId { get; set; }
         public bool Enabled { get; set; }
         public string Name { get; set; }
         public long CreatedBy { get; set; }
@@ -22,5 +24,7 @@ namespace Toucan.Data.Model
         public virtual ICollection<UserRole> Users { get; set; }
         public virtual User CreatedByUser { get; set; }
         public virtual User LastUpdatedByUser { get; set; }
+        public virtual Role Parent { get; set; }
+        public virtual ICollection<Role> Children { get; set; }
     }
 }

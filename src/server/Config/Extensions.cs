@@ -112,8 +112,8 @@ namespace Toucan.Server
 
             services.AddAuthorization(options =>
             {
-                options.AddPolicy(Security.AuthorizationClaimAttribute.PolicyName, o => {
-                    o.RequireAssertion(Security.AuthorizationClaimAttribute.PolicyHandler);
+                options.AddPolicy(Security.AuthorizeClaimAttribute.PolicyName, o => {
+                    o.RequireAssertion(Security.AuthorizeClaimAttribute.PolicyHandler);
                 });
             });
         }

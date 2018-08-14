@@ -1,7 +1,7 @@
 import { Module } from 'vuex';
 import { Mutations } from './mutations';
 import { Actions } from './actions';
-import { DefaultUser } from '../model/index';
+import { DefaultUser } from '../model';
 import { ICommonState } from './state';
 
 export { ICommonState } from './state';

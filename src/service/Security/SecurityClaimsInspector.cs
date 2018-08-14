@@ -16,8 +16,9 @@ namespace Toucan.Service.Security
             { ClaimRequirementType.Any, StrategyAny},
             { ClaimRequirementType.Exists, StrategyExists},
             { ClaimRequirementType.RegexPattern, StrategyRegexPattern},
-            { ClaimRequirementType.Strict, StrategyStrict}
+            { ClaimRequirementType.All, StrategyStrict}
         };
+
         private readonly Config config;
 
         public SecurityClaimsInspector(IOptions<Service.Config> config)
@@ -27,18 +28,16 @@ namespace Toucan.Service.Security
 
         public bool Satisifies(ClaimsPrincipal principal, ClaimRequirementType requirementType, string claimType, params object[] values)
         {
-            string claimsKey = this.config.ClaimsNamespace + claimType;
+            string type = this.config.ClaimsNamespace + claimType;
 
-            Claim claim = principal.Claims.FirstOrDefault(o => o.Type == claimsKey);
+            Claim claim = principal.Claims.FirstOrDefault(o => o.Type == type);
+
+            if (claim != null && claim.Value == SecurityClaimValueTypes.Deny.ToString())
+                return false;
 
             Func<Claim, object[], bool> strategy = strategies.Single(o => o.Key == requirementType).Value;
 
             return strategy(claim, values);
-        }
-
-        public Task<bool> SatisifiesAsync(ClaimsPrincipal principal, ClaimRequirementType requirementType, string claim, params object[] values)
-        {
-            return Task.FromResult(this.Satisifies(principal, requirementType, claim, values));
         }
 
         private static bool StrategyAny(Claim claim, params object[] values)
@@ -46,13 +45,18 @@ namespace Toucan.Service.Security
             if (claim == null || string.IsNullOrWhiteSpace(claim.Value))
                 return false;
 
-            if (claim.Value == AuthorizationClaimValueTypes.Any)
-                return true;
-
             if (values.Length == 0)
                 return true;
 
-            return values.Where(o => o != null).Any(o => String.Equals(o.ToString(), claim.Value));
+            bool any = values.Any(o =>
+            {
+                if (o.GetType() == typeof(char))
+                    return claim.Value.Contains(o.ToString());
+                else
+                    return claim.Value == o.ToString();
+            });
+
+            return any;
         }
 
         private static bool StrategyExists(Claim claim, params object[] values)
@@ -85,13 +89,18 @@ namespace Toucan.Service.Security
             if (claim == null || string.IsNullOrWhiteSpace(claim.Value))
                 return false;
 
-            if (claim.Value == AuthorizationClaimValueTypes.Any)
-                return true;
-
             if (values.Length == 0)
                 return true;
 
-            return values.Where(o => o != null).All(o => String.Equals(o.ToString(), claim.Value));
+            var found = values.Count(o =>
+            {
+                if (o.GetType() == typeof(char))
+                    return claim.Value.Contains(o.ToString());
+                else
+                    return claim.Value == o.ToString();
+            });
+
+            return found >= values.Length;
         }
     }
 }

@@ -59,8 +59,20 @@ namespace Toucan.Data
 
             modelBuilder.Entity<Role>(entity =>
             {
+                entity.HasKey(e => e.RoleId)
+                    .HasName("PK_RoleId");
+
                 entity.Property(e => e.RoleId)
+                    .IsRequired()
                     .HasMaxLength(32);
+
+                entity.Property(e => e.ParentRoleId)
+                    .HasMaxLength(32);
+
+                entity.HasOne(e => e.Parent)
+                    .WithMany(p => p.Children)
+                    .HasForeignKey(o => o.ParentRoleId)
+                    .IsRequired(false);
 
                 entity.Property(e => e.Enabled);
 

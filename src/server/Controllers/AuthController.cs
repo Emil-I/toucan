@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Toucan.Contract;
+using Toucan.Contract.Security;
 using Toucan.Service;
 using Toucan.Service.Security;
 using Toucan.Service.Model;
@@ -103,8 +104,8 @@ namespace Toucan.Server.Controllers
 
             this.SetAntiforgeryCookies();
 
-            string cultureClaimKey = this.serviceConfig.ClaimsNamespace + CustomClaimTypes.CultureName;
-            string timeZoneIdKey = this.serviceConfig.ClaimsNamespace +CustomClaimTypes.TimeZoneId;
+            string cultureClaimKey = this.serviceConfig.ClaimsNamespace + ProfileClaimTypes.CultureName;
+            string timeZoneIdKey = this.serviceConfig.ClaimsNamespace +ProfileClaimTypes.TimeZoneId;
 
             string cultureName = identity.Claims.FirstOrDefault(o => o.Type == cultureClaimKey).Value;
             string timeZoneId = identity.Claims.FirstOrDefault(o => o.Type == timeZoneIdKey).Value;

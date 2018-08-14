@@ -1,7 +1,7 @@
 
 namespace Toucan.Service.Security
 {
-    public static class CustomClaimTypes
+    public static class ProfileClaimTypes
     {
         public const string Verified = "verified";
         public const string CultureName = "culturename";
