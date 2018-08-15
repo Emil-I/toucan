@@ -70,7 +70,7 @@ namespace Toucan.Data
 
                 entity.HasOne(e => e.Parent)
                     .WithMany()
-                    .HasForeignKey(o => o.Children)
+                    .HasForeignKey(o => o.ParentRoleId)
                     .IsRequired(false);
 
                 entity.Property(e => e.Enabled);
@@ -83,6 +83,9 @@ namespace Toucan.Data
                     .IsRequired()
                     .HasColumnType("timestamp WITH TIME ZONE")
                     .HasDefaultValueSql("current_timestamp AT TIME ZONE 'UTC'");
+
+                entity.Property(e => e.LastUpdatedOn)
+                    .HasColumnType("timestamp WITH TIME ZONE");
 
                 entity.HasOne(e => e.CreatedByUser)
                     .WithMany()
@@ -105,7 +108,20 @@ namespace Toucan.Data
                     .IsRequired()
                     .HasMaxLength(512);
 
-                entity.AddAuditColumns();
+                entity.Property(e => e.CreatedOn)
+                    .IsRequired()
+                    .HasColumnType("timestamp WITH TIME ZONE")
+                    .HasDefaultValueSql("current_timestamp AT TIME ZONE 'UTC'");
+
+                entity.HasOne(e => e.CreatedByUser)
+                    .WithMany()
+                    .HasForeignKey(o => o.CreatedBy)
+                    .IsRequired();
+
+                entity.HasOne(e => e.LastUpdatedByUser)
+                    .WithMany()
+                    .HasForeignKey(o => o.LastUpdatedBy)
+                    .IsRequired(false);
             });
 
             modelBuilder.Entity<RoleSecurityClaim>(entity =>
@@ -262,8 +278,7 @@ namespace Toucan.Data
 
                 entity.HasOne(d => d.Role)
                     .WithMany(p => p.Users)
-                    .HasForeignKey(d => d.RoleId)
-                    .HasConstraintName("FK_UserRole_Role")
+                    .HasForeignKey(d => d.RoleId) 
                     .OnDelete(DeleteBehavior.ClientSetNull);
 
                 entity.HasOne(d => d.User)

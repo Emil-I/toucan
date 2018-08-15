@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Toucan.Contract;
 using Toucan.Contract.Security;
 using Toucan.Data;
@@ -15,11 +16,15 @@ namespace Toucan.Service
 {
     public class ManageUserService : IManageUserService, IManageProfileService
     {
+        private readonly Config config;
         private readonly DbContextBase db;
+        private readonly IDeviceProfiler deviceProfiler;
 
-        public ManageUserService(DbContextBase db)
+        public ManageUserService(DbContextBase db, IOptions<Config> config, IDeviceProfiler deviceProfiler)
         {
+            this.config = config.Value;
             this.db = db;
+            this.deviceProfiler = deviceProfiler;
         }
 
         public async Task<IDictionary<string, string>> GetAvailableRoles()
@@ -77,7 +82,7 @@ namespace Toucan.Service
 
             return this.MapUser(dbUser);
         }
-        public async Task<IUserExtended> UpdateUserCulture(long userId, string cultureName, string timeZoneId)
+        async Task<IUserExtended> IManageProfileService.UpdateUserCulture(long userId, string cultureName, string timeZoneId)
         {
             Data.Model.User dbUser = this.db.User.SingleOrDefault(o => o.UserId == userId);
 
@@ -90,6 +95,24 @@ namespace Toucan.Service
 
             return this.MapUser(dbUser);
         }
+
+        public async Task<ClaimsIdentity> UpdateUserCulture(long userId, string cultureName, string timeZoneId)
+        {
+            Data.Model.User dbUser = this.db.User.SingleOrDefault(o => o.UserId == userId);
+
+            if (dbUser == null)
+                return null;
+
+            new ManageUserHelper(dbUser).UpdateCulture(cultureName, timeZoneId);
+
+            await this.db.SaveChangesAsync();
+
+            string fingerprint = this.deviceProfiler.DeriveFingerprint(dbUser);
+            ClaimsIdentity identity = dbUser.ToClaimsIdentity(this.config.ClaimsNamespace, fingerprint);
+
+            return identity;
+        }
+
         public async Task<IUserExtended> UpdateUserStatus(string username, bool enabled)
         {
             Data.Model.User dbUser = this.db.User.SingleOrDefault(o => o.Username == username);

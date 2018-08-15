@@ -54,8 +54,8 @@ export class ReadRole extends Vue {
       userName = this.role.createdByUser.displayName;
 
     let dt = this.role.lastUpdatedOn || this.role.createdOn || new Date();
-    let date = new Date(dt).toLocaleDateString();
-    let time = new Date(dt).toLocaleTimeString();
+    let date = new Date(dt).toDateString();
+    let time = new Date(dt).toTimeString().split(' ')[0];
 
     return `${userName} @ ${date} ${time}`;
   }

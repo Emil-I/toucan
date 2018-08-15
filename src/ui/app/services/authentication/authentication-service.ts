@@ -1,169 +1,151 @@
-import { default as Axios, AxiosResponse } from 'axios';
-import { every, includes, keys } from 'lodash/fp';
-import { IClaimsHelper } from './claims-helper';
-import { GlobalConfig, PayloadMessageTypes, TokenHelper } from '../../common';
-import { IAccessToken, ICredential, ILoginProvider, IPayload, ISignupOptions, IUser, DefaultUser } from '../../model';
-import { Store, StoreService } from '../../store';
+import { default as Axios, AxiosResponse } from "axios";
+import { every, has } from "lodash/fp";
+import { IClaimsHelper } from "./claims-helper";
+import { GlobalConfig, PayloadMessageTypes, TokenHelper } from "../../common";
+import {
+  IAccessToken,
+  ICredential,
+  ILoginProvider,
+  IPayload,
+  ISignupOptions,
+  IUser,
+  DefaultUser
+} from "../../model";
+import { Store, StoreService } from "../../store";
 
 // URL and endpoint constants
 const AUTH_URL = GlobalConfig.uri.auth;
-const AUTH_ISSUE_NONCE = AUTH_URL + 'external/issuenonce';
-const LOGIN_URL = AUTH_URL + 'token';
-const LOGOUT_URL = AUTH_URL + 'logout';
-const SIGNUP_URL = AUTH_URL + 'signup';
-const REDEEM_ACCESS_TOKEN = AUTH_URL + 'external/redeemtoken';
-const VERIFICATION_CODE_URL = AUTH_URL + 'issueverificationcode';
-const REDEEM_VERIFICATION_CODE = AUTH_URL + 'redeemverificationcode';
+const AUTH_ISSUE_NONCE = AUTH_URL + "external/issuenonce";
+const LOGIN_URL = AUTH_URL + "token";
+const LOGOUT_URL = AUTH_URL + "logout";
+const SIGNUP_URL = AUTH_URL + "signup";
+const REDEEM_ACCESS_TOKEN = AUTH_URL + "external/redeemtoken";
+const VERIFICATION_CODE_URL = AUTH_URL + "issueverificationcode";
+const REDEEM_VERIFICATION_CODE = AUTH_URL + "redeemverificationcode";
 
-export { IClaimsHelper } from './claims-helper';
+export { IClaimsHelper } from "./claims-helper";
 
-export class AuthenticationService extends StoreService implements IClaimsHelper {
+export class AuthenticationService extends StoreService
+  implements IClaimsHelper {
+  constructor(store: Store<{}>) {
+    super(store);
+  }
 
-    constructor(store: Store<{}>) {
-        super(store);
-    }
+  /**
+   * Retreives a nonce value, so that incoming redirects from oauth providers can be validated by the server when redeeming access tokens ...
+   */
+  getAuthorizationNonce() {
+    let onSuccess = (payload: IPayload<string>) => {
+      if (payload.message.messageTypeId === PayloadMessageTypes.success) {
+        return payload.data;
+      } else {
+        throw new Error(payload.message.text);
+      }
+    };
 
-    /**
-     * Retreives a nonce value, so that incoming redirects from oauth providers can be validated by the server when redeeming access tokens ...
-     */
-    getAuthorizationNonce() {
+    return this.exec(Axios.post(AUTH_ISSUE_NONCE)).then(onSuccess);
+  }
 
-        let onSuccess = (payload: IPayload<string>) => {
+  satisfies(user: IUser, claims: string[]): boolean {
+    if (!user.claims) return false;
 
-            if (payload.message.messageTypeId === PayloadMessageTypes.success) {
-                return payload.data;
-            } else {
-                throw new Error(payload.message.text);
-            }
-        }
+    return every(claims, o => user["claims"] !== undefined);
+  }
 
-        return this.exec(Axios.post(AUTH_ISSUE_NONCE))
-            .then(onSuccess);
-    }
+  satisfiesAny(user: IUser, claims: string[]): boolean {
+    if (!user.claims) return false;
 
-    satisfies(user: IUser, claims: string[]): boolean {
+    return claims.find(o => user["claims"] !== undefined) !== undefined;
+  }
 
-        if (!user.claims)
-            return false;
+  login(credentials: ICredential) {
+    let onSuccess = (token: IAccessToken) => {
+      if (token) {
+        TokenHelper.setAccessToken(token.access_token);
 
-        let items = keys(user.claims);
+        return TokenHelper.parseUserToken(token.access_token);
+      }
+    };
 
-        if (claims.length === 1)
-            return includes(claims[0], items);
-        else
-            return every(o => includes(o, items), claims);
-    }
+    return this.exec(Axios.post(LOGIN_URL, credentials))
+      .then(value => this.processPayload(value))
+      .then(onSuccess);
+  }
 
-    satisfiesAny(user: IUser, claims: string[]): boolean {
+  logout() {
+    let onSuccess = (res: AxiosResponse) => {
+      let payload: IPayload<IAccessToken> = res.data;
 
-        if (!user.claims)
-            return false;
+      if (payload.message.messageTypeId === PayloadMessageTypes.success) {
+        let user: IUser = Object.assign({}, DefaultUser);
 
-        return claims.find(o => includes(o.split('/')[0], user.claims)) !== undefined;
-    }
+        TokenHelper.removeAccessToken();
 
-    login(credentials: ICredential) {
+        return user;
+      } else {
+        throw new Error(payload.message.text);
+      }
+    };
 
-        let onSuccess = (token: IAccessToken) => {
+    return Axios.put(LOGOUT_URL, null).then(onSuccess);
+  }
 
-            if (token) {
+  redeemAccessToken(provider: ILoginProvider) {
+    let onSuccess = (token: IAccessToken) => {
+      if (token) {
+        TokenHelper.setAccessToken(token.access_token);
+        TokenHelper.removeProvider();
 
-                TokenHelper.setAccessToken(token.access_token);
+        return TokenHelper.parseUserToken(token.access_token);
+      }
+    };
 
-                return TokenHelper.parseUserToken(token.access_token);
-            }
-        }
+    let data = {
+      accessToken: encodeURIComponent(provider.access_token),
+      nonce: provider.nonce,
+      providerId: provider.providerId
+    };
 
-        return this.exec(Axios.post(LOGIN_URL, credentials))
-            .then(value => this.processPayload(value))
-            .then(onSuccess);
-    }
+    return this.exec(Axios.post(REDEEM_ACCESS_TOKEN, data))
+      .then(value => this.processPayload(value))
+      .then(onSuccess);
+  }
 
-    logout() {
+  redeemVerificationCode(code: string) {
+    let onSuccess = (token: IAccessToken) => {
+      if (token) {
+        TokenHelper.setAccessToken(token.access_token);
 
-        let onSuccess = (res: AxiosResponse) => {
+        return TokenHelper.parseUserToken(token.access_token);
+      }
+    };
 
-            let payload: IPayload<IAccessToken> = res.data;
+    let config = {
+      params: { code: code }
+    };
 
-            if (payload.message.messageTypeId === PayloadMessageTypes.success) {
-                let user: IUser = Object.assign({}, DefaultUser);
+    return this.exec(Axios.put(REDEEM_VERIFICATION_CODE, null, config))
+      .then(value => this.processPayload(value))
+      .then(onSuccess);
+  }
 
-                TokenHelper.removeAccessToken();
+  signup(signup: ISignupOptions) {
+    let onSuccess = (token: IAccessToken) => {
+      if (token) {
+        TokenHelper.setAccessToken(token.access_token);
 
-                return user;
-            } else {
-                throw new Error(payload.message.text);
-            }
-        }
+        return TokenHelper.parseUserToken(token.access_token);
+      }
+    };
 
-        return Axios.put(LOGOUT_URL, null)
-            .then(onSuccess);
-    }
+    return this.exec(Axios.post(SIGNUP_URL, signup))
+      .then(value => this.processPayload(value))
+      .then(onSuccess);
+  }
 
-    redeemAccessToken(provider: ILoginProvider) {
-
-        let onSuccess = (token: IAccessToken) => {
-
-            if (token) {
-
-                TokenHelper.setAccessToken(token.access_token);
-                TokenHelper.removeProvider();
-
-                return TokenHelper.parseUserToken(token.access_token);
-            }
-        };
-
-        let data = {
-            accessToken: encodeURIComponent(provider.access_token),
-            nonce: provider.nonce,
-            providerId: provider.providerId
-        }
-
-        return this.exec(Axios.post(REDEEM_ACCESS_TOKEN, data))
-            .then(value => this.processPayload(value))
-            .then(onSuccess);
-    }
-
-    redeemVerificationCode(code: string) {
-
-        let onSuccess = (token: IAccessToken) => {
-
-            if (token) {
-
-                TokenHelper.setAccessToken(token.access_token);
-
-                return TokenHelper.parseUserToken(token.access_token);
-            }
-        };
-
-        let config = {
-            params: { code: code }
-        };
-
-        return this.exec(Axios.put(REDEEM_VERIFICATION_CODE, null, config))
-            .then(value => this.processPayload(value))
-            .then(onSuccess);
-    }
-
-    signup(signup: ISignupOptions) {
-
-        let onSuccess = (token: IAccessToken) => {
-
-            if (token) {
-
-                TokenHelper.setAccessToken(token.access_token);
-
-                return TokenHelper.parseUserToken(token.access_token);
-            }
-        }
-
-        return this.exec(Axios.post(SIGNUP_URL, signup))
-            .then(value => this.processPayload(value))
-            .then(onSuccess);
-    }
-
-    verify() {
-        return this.exec(Axios.get(VERIFICATION_CODE_URL))
-            .then(value => this.processPayload<string>(<any>value))
-    }
+  verify() {
+    return this.exec(Axios.get(VERIFICATION_CODE_URL)).then(value =>
+      this.processPayload<string>(<any>value)
+    );
+  }
 }

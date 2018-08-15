@@ -60,6 +60,7 @@ namespace Toucan.Service.Model
                     UserId = value.LastUpdatedByUser?.UserId ?? 0,
                     DisplayName = value.LastUpdatedByUser?.DisplayName
                 },
+                LastUpdatedOn = value.LastUpdatedOn,
                 Name = value.Name,
                 Parent = value.Parent?.MapToVm(),
                 ParentRoleId = value.ParentRoleId

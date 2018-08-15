@@ -1,5 +1,6 @@
 
 using System.Buffers;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Formatters;
@@ -21,11 +22,31 @@ namespace Toucan.Server.Formatters
 
             IDomainContext domainContext = resolver.Resolve();
 
-            this.SerializerSettings.Culture = domainContext.Culture;
-            this.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Local;
-            this.SerializerSettings.Converters.Add(new DateTimeConverter(domainContext.SourceTimeZone));
-            
-            return base.WriteResponseBodyAsync(context, selectedEncoding);
+            var settings = new JsonSerializerSettings()
+            {
+                Culture = domainContext.Culture,
+                DateTimeZoneHandling = DateTimeZoneHandling.Local
+            };
+
+            settings.Converters.Add(new DateTimeConverter(domainContext.SourceTimeZone));
+
+            OutputFormatterWriteContext alt = null;
+
+            using (var ms = new MemoryStream())
+            {
+                using (var jw = new JsonTextWriter(new StreamWriter(ms)))
+                {
+                    var s = JsonSerializer.Create(settings);
+                    s.Serialize(jw, context.Object);
+                    jw.Flush();
+                    ms.Position = 0;
+                    var r = new JsonTextReader(new StreamReader(ms));
+                    var copy = s.Deserialize(r, context.ObjectType);
+                    alt = new OutputFormatterWriteContext(context.HttpContext, context.WriterFactory, context.ObjectType, copy);
+                }
+            };
+
+            return base.WriteResponseBodyAsync(alt ?? context, selectedEncoding);
         }
     }
 }

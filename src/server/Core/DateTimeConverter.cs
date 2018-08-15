@@ -44,8 +44,13 @@ namespace Toucan.Server.Core
                 if (value != null)
                 {
                     DateTime? date = new Nullable<DateTime>((DateTime)value);
-                    string kind = date.HasValue ? date.Value.Kind.ToString() : "";
-                    date = TimeZoneInfo.ConvertTimeFromUtc(date.Value, this.sourceTimeZone);
+                    var kind = date.HasValue ? date.Value.Kind : DateTimeKind.Unspecified;
+
+                    if (kind != DateTimeKind.Local)
+                        date = TimeZoneInfo.ConvertTimeFromUtc(date.Value, this.sourceTimeZone);
+                    else if (this.sourceTimeZone != TimeZoneInfo.Local)
+                        date = TimeZoneInfo.ConvertTime(date.Value, this.sourceTimeZone);
+
                     t = JToken.FromObject(date);
                 }
             }
