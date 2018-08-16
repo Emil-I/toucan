@@ -29,7 +29,7 @@ namespace Toucan.Server.Core
 
                 DateTime date = value.GetType() == typeof(DateTime?) ? (DateTime)value : ((DateTime?)value).Value;
 
-                existingValue = date.ToSourceUtc(this.sourceTimeZone, null);
+                existingValue = date.ToSourceUtc(this.sourceTimeZone);
             }
 
             return existingValue;
