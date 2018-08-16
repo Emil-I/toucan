@@ -1,6 +1,10 @@
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Toucan.Contract;
 
 namespace Toucan.Server
@@ -9,33 +13,19 @@ namespace Toucan.Server
     {
         public static DateTime? ToSourceUtc(this string value, CultureInfo culture, TimeZoneInfo sourceTimeZone)
         {
-            DateTime? dateTime = null;
+            string clean = Sanitize(value);
 
-            if (DateTime.TryParse(value, culture, DateTimeStyles.AssumeLocal, out DateTime date))
-            {
-                TimeSpan? offset = null;
-
-                if (date.TimeOfDay == TimeSpan.Zero && HasExplicitOffset(value))
-                    offset = DateTimeOffset.Parse(value, culture).Offset;
-
-                if (sourceTimeZone.Id == TimeZoneInfo.Local.Id)
-                    date = TimeZoneInfo.ConvertTime(date, sourceTimeZone);
-
-                dateTime = date.ToSourceUtc(sourceTimeZone, offset);
-            }
-
-            return dateTime;
+            if (DateTime.TryParse(clean, culture, DateTimeStyles.AssumeUniversal, out DateTime date))
+                return date.ToSourceUtc(sourceTimeZone);
+            else
+                return null;
         }
 
-        public static DateTime? ToSourceUtc(this DateTime date, TimeZoneInfo sourceTimeZone, TimeSpan? offset = null)
+        public static DateTime? ToSourceUtc(this DateTime date, TimeZoneInfo sourceTimeZone)
         {
             DateTime? dateTime = null;
 
-            if (date.TimeOfDay == TimeSpan.Zero)
-            {
-                dateTime = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
-            }
-            else if (sourceTimeZone.Id == TimeZoneInfo.Local.Id)
+            if (sourceTimeZone.Id == TimeZoneInfo.Local.Id)
             {
                 dateTime = date.ToUniversalTime();
             }
@@ -43,18 +33,28 @@ namespace Toucan.Server
             {
                 DateTime sourceDateTime = TimeZoneInfo.ConvertTime(date, TimeZoneInfo.Local, sourceTimeZone);
 
-                if (offset.HasValue)
-                    sourceDateTime = sourceDateTime.Add(offset.Value);
-
                 dateTime = TimeZoneInfo.ConvertTimeToUtc(sourceDateTime, sourceTimeZone);
             }
 
             return dateTime;
         }
 
-        private static bool HasExplicitOffset(string value)
+        private static string Sanitize(string value)
         {
-            return value.Contains("+") || value.Contains("-") || value.Trim().ToLower().EndsWith("gmt");
+            if (value.EndsWith("GMT"))
+                return value; //  Javascript = new Date().toUTCString()
+
+            if (value.EndsWith("Z") && value.Contains("T"))
+                return value; //  Javascript = new Date().toISOString()
+
+            if (Regex.IsMatch(value, @"(GMT\+[\d]+\s\([\w\s]+\))+"))
+            {
+                // Javascript = new Date().toString()
+                var values = value.Split(" ").Take(5).ToArray();
+                return $"{values[0]}, {values[2]} {values[1]} {values[3]} {values[4]} GMT";
+            }
+
+            return value;
         }
     }
 }

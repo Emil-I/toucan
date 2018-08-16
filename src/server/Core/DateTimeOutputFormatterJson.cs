@@ -1,11 +1,13 @@
-
+using System;
 using System.Buffers;
-using System.IO;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Toucan.Contract;
 using Toucan.Server.Core;
 
@@ -16,6 +18,7 @@ namespace Toucan.Server.Formatters
         public DateTimeOutputFormatterJson(JsonSerializerSettings serializerSettings, ArrayPool<char> charPool) : base(serializerSettings, charPool)
         {
         }
+        
         public override Task WriteResponseBodyAsync(OutputFormatterWriteContext context, Encoding selectedEncoding)
         {
             var resolver = context.HttpContext.RequestServices.GetService<IHttpServiceContextResolver>();
@@ -24,29 +27,25 @@ namespace Toucan.Server.Formatters
 
             var settings = new JsonSerializerSettings()
             {
+                ContractResolver = new DefaultContractResolver() { NamingStrategy = new CamelCaseNamingStrategy() },
+                Converters = new List<JsonConverter>() { new DateTimeConverter(domainContext.SourceTimeZone) },
                 Culture = domainContext.Culture,
                 DateTimeZoneHandling = DateTimeZoneHandling.Local
             };
 
-            settings.Converters.Add(new DateTimeConverter(domainContext.SourceTimeZone));
-
-            OutputFormatterWriteContext alt = null;
-
-            using (var ms = new MemoryStream())
+            try
             {
-                using (var jw = new JsonTextWriter(new StreamWriter(ms)))
-                {
-                    var s = JsonSerializer.Create(settings);
-                    s.Serialize(jw, context.Object);
-                    jw.Flush();
-                    ms.Position = 0;
-                    var r = new JsonTextReader(new StreamReader(ms));
-                    var copy = s.Deserialize(r, context.ObjectType);
-                    alt = new OutputFormatterWriteContext(context.HttpContext, context.WriterFactory, context.ObjectType, copy);
-                }
-            };
-
-            return base.WriteResponseBodyAsync(alt ?? context, selectedEncoding);
+                context.HttpContext.RequestAborted.ThrowIfCancellationRequested();
+                return context.HttpContext.Response.WriteAsync(JsonConvert.SerializeObject(context.Object, settings), selectedEncoding, context.HttpContext.RequestAborted);
+            }
+            catch (System.OperationCanceledException)
+            {
+                return Task.CompletedTask;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
     }
 }

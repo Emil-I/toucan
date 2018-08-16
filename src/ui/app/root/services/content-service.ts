@@ -14,10 +14,19 @@ export class ContentService extends StoreService {
 
   rikerIpsum() {
     let payload: IPayload<string> = null;
+    let dt = new Date();
     let uri =
       BASE_URL +
-      "rikeripsum/?clientTime=" +
-      encodeURIComponent(new Date().toISOString());
+      "rikeripsum/?default=" +
+      encodeURIComponent(dt.toString()) +
+      "&locale=" +
+      encodeURIComponent(dt.toLocaleString()) +
+      "&iso=" +
+      encodeURIComponent(dt.toISOString()) +
+      "&utc=" +
+      encodeURIComponent(dt.toUTCString());
+
+    console.log(uri);
 
     return this.exec<string>(Axios.get(uri))
       .then(value => {
